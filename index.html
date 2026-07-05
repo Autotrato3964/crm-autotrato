@@ -1,0 +1,2182 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CRM Autotrato</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1A1A2E">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Autotrato CRM">
+<script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+<script>
+  window.OneSignalDeferred = window.OneSignalDeferred || [];
+  OneSignalDeferred.push(async function(OneSignal) {
+    await OneSignal.init({
+      appId: "TU_ONESIGNAL_APP_ID",
+    });
+  });
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+  :root{
+    --bg:#F8F9FC;
+    --panel:#FFFFFF;
+    --ink:#1A1A2E;
+    --ink-soft:#64748B;
+    --line:#E2E8F0;
+    --primary:#1A1A2E;
+    --primary-dark:#2D2D4E;
+    --accent:#E91E8C;
+    --accent-soft:#FCE4F3;
+    --accent-dark:#C01070;
+    --ok:#1B8A5A;
+    --ok-soft:#E4F5EC;
+    --warn:#C48A00;
+    --warn-soft:#FCF2D9;
+    --danger:#C23B3B;
+    --danger-soft:#FBE7E7;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:var(--bg);
+    color:var(--ink);
+  }
+  ::selection{background:var(--accent-soft);}
+
+  /* ---------- LOGIN ---------- */
+  #login-screen{
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:
+      linear-gradient(160deg, rgba(26,26,46,.88), rgba(31,58,95,.82) 60%),
+      url('fondo-autotrato.png') center/cover no-repeat;
+  }
+  .login-card{
+    background:var(--panel);
+    border-radius:16px;
+    padding:44px 40px;
+    width:360px;
+    box-shadow:0 20px 60px rgba(0,0,0,.35);
+  }
+  .login-mark{
+    width:44px;height:44px;border-radius:10px;
+    background:var(--accent);
+    color:#fff;
+    display:flex;align-items:center;justify-content:center;
+    font-weight:800;font-size:20px;margin-bottom:18px;
+  }
+  .login-card h1{font-size:20px;margin:0 0 4px;}
+  .login-card p{color:var(--ink-soft);font-size:13px;margin:0 0 24px;}
+  .field{margin-bottom:14px;}
+  .field label{display:block;font-size:12px;font-weight:600;color:var(--ink-soft);margin-bottom:6px;}
+  .field input, .field select, .field textarea{
+    width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;
+    font-size:14px;font-family:inherit;background:#fff;color:var(--ink);
+  }
+  .field input:focus, .field select:focus, .field textarea:focus{outline:2px solid var(--primary);outline-offset:1px;}
+  .btn{
+    border:none;border-radius:8px;padding:10px 16px;font-size:14px;font-weight:600;
+    cursor:pointer;font-family:inherit;
+  }
+  .btn-primary{background:var(--primary);color:#fff;width:100%;padding:12px;}
+  .btn-primary:hover{background:var(--primary-dark);}
+  .btn-accent{background:var(--accent);color:#fff;}
+  .btn-accent:hover{filter:brightness(0.93);}
+  .btn-ghost{background:transparent;color:var(--ink-soft);border:1px solid var(--line);}
+  .btn-ghost:hover{background:var(--bg);}
+  .error-msg{color:var(--danger);font-size:13px;margin-top:10px;}
+
+  /* ---------- APP SHELL ---------- */
+  #app{display:none;min-height:100vh;}
+  .shell{display:grid;grid-template-columns:220px 1fr;min-height:100vh;}
+  .sidebar{
+    background:var(--primary-dark);color:#fff;padding:22px 16px;
+    display:flex;flex-direction:column;
+  }
+  .sidebar .brand{display:flex;align-items:center;gap:10px;margin-bottom:28px;padding:0 6px;}
+  .sidebar .brand .mark{width:32px;height:32px;border-radius:8px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:800;}
+  .sidebar .brand span{font-weight:700;font-size:15px;}
+  .nav-item{
+    display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;
+    color:rgba(255,255,255,.75);cursor:pointer;font-size:14px;margin-bottom:2px;
+  }
+  .nav-item:hover{background:rgba(255,255,255,.06);color:#fff;}
+  .nav-item.active{background:rgba(255,255,255,.12);color:#fff;font-weight:600;}
+  .sidebar-footer{margin-top:auto;padding-top:16px;border-top:1px solid rgba(255,255,255,.1);}
+  .user-chip{display:flex;align-items:center;gap:8px;font-size:13px;color:rgba(255,255,255,.8);margin-bottom:10px;}
+  .user-chip .dot{width:8px;height:8px;border-radius:50%;background:#4ADE80;}
+  .logout-link{color:rgba(255,255,255,.55);font-size:12px;cursor:pointer;text-decoration:underline;}
+
+  .main{padding:28px 32px;overflow-x:auto;}
+  .page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:22px;flex-wrap:wrap;gap:12px;}
+  .page-header h2{margin:0;font-size:22px;}
+  .page-header p{margin:2px 0 0;color:var(--ink-soft);font-size:13px;}
+
+  /* ---------- CARDS / STATS ---------- */
+  .stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:24px;}
+  .stat-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px;}
+  .stat-card .num{font-size:26px;font-weight:800;line-height:1;}
+  .stat-card .lbl{font-size:12px;color:var(--ink-soft);margin-top:6px;}
+
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;}
+  .panel-header{padding:14px 18px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;}
+  .filters{display:flex;gap:8px;flex-wrap:wrap;}
+  .filters select, .filters input{padding:7px 10px;border:1px solid var(--line);border-radius:7px;font-size:13px;background:#fff;}
+
+  table{width:100%;border-collapse:collapse;font-size:13.5px;}
+  th{text-align:left;padding:10px 16px;color:var(--ink-soft);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.03em;border-bottom:1px solid var(--line);white-space:nowrap;}
+  td{padding:12px 16px;border-bottom:1px solid var(--line);vertical-align:middle;}
+  tr:last-child td{border-bottom:none;}
+  tr:hover td{background:#FAFBFC;}
+  .lead-name{font-weight:600;}
+  .lead-sub{color:var(--ink-soft);font-size:12px;}
+
+  .badge{display:inline-block;padding:4px 10px;border-radius:100px;font-size:12px;font-weight:600;white-space:nowrap;}
+  .badge-nuevo{background:var(--warn-soft);color:var(--warn);}
+  .badge-contactado{background:#E5EEFB;color:#1D5FC4;}
+  .badge-negociacion{background:var(--accent-soft);color:var(--accent);}
+  .badge-turno{background:#EFE6FB;color:#7B3FE4;}
+  .badge-vendido{background:var(--ok-soft);color:var(--ok);}
+  .badge-perdido{background:var(--danger-soft);color:var(--danger);}
+
+  select.status-select, select.vendor-select{
+    border:1px solid var(--line);border-radius:7px;padding:6px 8px;font-size:12.5px;background:#fff;font-family:inherit;
+  }
+
+  .empty-state{padding:60px 20px;text-align:center;color:var(--ink-soft);}
+  .empty-state .big{font-size:15px;color:var(--ink);font-weight:600;margin-bottom:4px;}
+
+  /* ---------- MODAL ---------- */
+  .modal-overlay{
+    display:none;position:fixed;inset:0;background:rgba(15,22,38,.5);
+    align-items:center;justify-content:center;z-index:100;padding:20px;
+  }
+  .modal{background:#fff;border-radius:14px;padding:28px;width:100%;max-width:480px;max-height:88vh;overflow-y:auto;}
+  .modal h3{margin:0 0 18px;font-size:18px;}
+  .modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:20px;}
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+
+  @media (max-width:800px){
+    .shell{grid-template-columns:1fr;}
+    .sidebar{display:flex;flex-direction:row;overflow-x:auto;padding:12px;}
+    .sidebar .brand{display:none;}
+    .sidebar-footer{display:none;}
+    .nav-item{white-space:nowrap;}
+    .two-col{grid-template-columns:1fr;}
+    #mobile-topbar{display:flex;}
+    .main{padding:18px 16px;}
+    [id$="-wrap"]{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+    .scroll-hint{display:block;}
+  }
+  #mobile-topbar{
+    display:none;
+    align-items:center;justify-content:space-between;
+    padding:10px 16px;
+    background:var(--primary-dark);
+  }
+  #mobile-topbar span{color:rgba(255,255,255,.85);font-size:13px;font-weight:600;}
+  #mobile-topbar button{
+    background:var(--accent);color:#fff;border:none;border-radius:7px;
+    padding:6px 12px;font-size:12px;font-weight:600;font-family:inherit;
+  }
+  .scroll-hint{display:none;font-size:12px;color:var(--ink-soft);padding:8px 16px 0;text-align:center}
+</style>
+</head>
+<body>
+
+<!-- ===================== LOGIN ===================== -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-mark" style="background:none;padding:0;overflow:hidden"><img src="icon-192.png" alt="Autotrato" style="width:100%;height:100%;object-fit:cover;border-radius:10px"></div>
+    <h1>CRM Autotrato</h1>
+    <p>Ingresá con tu cuenta para ver tus leads</p>
+    <div class="field">
+      <label>Email</label>
+      <input type="email" id="login-email" placeholder="tu@autotrato.com">
+    </div>
+    <div class="field">
+      <label>Contraseña</label>
+      <input type="password" id="login-password" placeholder="••••••••">
+    </div>
+    <button class="btn btn-primary" onclick="iniciarSesion()">Ingresar</button>
+    <div class="error-msg" id="login-error"></div>
+  </div>
+</div>
+
+<!-- ===================== APP ===================== -->
+<div id="app">
+  <div id="mobile-topbar">
+    <span id="mobile-user-name">—</span>
+    <button onclick="cerrarSesion()">Salir</button>
+  </div>
+  <div class="shell">
+    <div class="sidebar">
+      <div class="brand"><div class="mark" style="background:none;padding:0;overflow:hidden"><img src="icon-192.png" alt="Autotrato" style="width:100%;height:100%;object-fit:cover;border-radius:8px"></div><span>Autotrato CRM</span></div>
+      <div class="nav-item active" data-view="hoy" onclick="cambiarVista('hoy')">📅 Hoy <span id="hoy-badge" style="display:none;background:var(--danger);color:#fff;border-radius:100px;padding:1px 7px;font-size:11px;font-weight:700;margin-left:4px"></span></div>
+      <div class="nav-item" data-view="leads" onclick="cambiarVista('leads')">Leads</div>
+      <div class="nav-item" data-view="misventas" id="nav-misventas" style="display:none" onclick="cambiarVista('misventas')">Mis ventas</div>
+      <div class="nav-item" data-view="dashboard" id="nav-dashboard" style="display:none" onclick="cambiarVista('dashboard')">Panel</div>
+      <div class="nav-item" data-view="vendedores" id="nav-vendedores" style="display:none" onclick="cambiarVista('vendedores')">Vendedores</div>
+      <div class="nav-item" data-view="comisiones" id="nav-comisiones" style="display:none" onclick="cambiarVista('comisiones')">Comisiones</div>
+      <div class="nav-item" data-view="cuentacorriente" id="nav-cuentacorriente" style="display:none" onclick="cambiarVista('cuentacorriente')">Cuenta corriente</div>
+
+      <div id="sidebar-ranking" style="display:none;margin-top:22px;padding:14px;background:rgba(255,255,255,.06);border-radius:10px">
+        <div style="font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:rgba(255,255,255,.6);margin-bottom:10px">🏆 Ventas del mes</div>
+        <div id="sidebar-ranking-list" style="font-size:13px;color:rgba(255,255,255,.9)"></div>
+      </div>
+
+      <div class="sidebar-footer">
+        <div class="user-chip"><span class="dot"></span><span id="user-name-chip">—</span></div>
+        <span class="logout-link" onclick="cerrarSesion()">Cerrar sesión</span>
+      </div>
+    </div>
+
+    <div class="main">
+      <div class="scroll-hint">↔️ Deslizá las tablas hacia los costados para ver todas las columnas</div>
+
+      <!-- VISTA: HOY (panel diario) -->
+      <div id="view-hoy">
+        <div class="page-header">
+          <div>
+            <h2>Hoy</h2>
+            <p>Leads nuevos y seguimientos pendientes — sin lo ya cerrado</p>
+          </div>
+        </div>
+        <div id="alerta-liberados" style="display:none;background:var(--danger-soft);border:1px solid var(--danger);border-radius:10px;padding:14px 18px;margin-bottom:16px">
+          <strong style="color:var(--danger)">⚠️ Hay leads sin reasignar</strong>
+          <p style="margin:4px 0 0;font-size:13px;color:var(--ink)">Pasaron más de 24hs sin que los contactaran, así que se les quitó el vendedor automáticamente. Reasignalos abajo (filtrá por "Todos los vendedores" en Leads si no los ves acá).</p>
+          <div id="alerta-liberados-lista" style="margin-top:8px"></div>
+        </div>
+
+        <div id="hoy-seccion-propios">
+          <h3 id="hoy-titulo-propios" style="font-size:14px;margin:0 0 8px">Tus leads</h3>
+          <div class="panel" style="margin-bottom:20px">
+            <div id="hoy-table-wrap">
+              <div class="empty-state">Cargando...</div>
+            </div>
+          </div>
+        </div>
+
+        <div id="hoy-seccion-equipo" style="display:none">
+          <h3 style="font-size:14px;margin:0 0 8px">Leads de tu equipo</h3>
+          <div class="panel">
+            <div id="hoy-equipo-table-wrap">
+              <div class="empty-state">Cargando...</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- VISTA: MIS VENTAS -->
+      <div id="view-misventas" style="display:none">
+        <div class="page-header">
+          <div>
+            <h2>Mis ventas</h2>
+            <p>Seguimiento de tus operaciones cerradas y comisión estimada</p>
+          </div>
+          <div class="filters">
+            <input type="month" id="misventas-periodo" onchange="renderMisVentas()">
+          </div>
+        </div>
+        <div class="panel">
+          <div id="misventas-table-wrap">
+            <div class="empty-state">Cargando...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- VISTA: LEADS -->
+      <div id="view-leads" style="display:none">
+        <div class="page-header">
+          <div>
+            <h2>Leads</h2>
+            <p id="leads-subtitle">Cargando...</p>
+          </div>
+          <button class="btn btn-accent" id="btn-nuevo-lead" style="display:none" onclick="abrirModalNuevoLead()">+ Nuevo lead</button>
+        </div>
+
+        <div class="panel" style="margin-bottom:18px;display:none" id="panel-carga-rapida">
+          <div class="panel-header"><strong>Carga rápida desde WhatsApp</strong></div>
+          <div style="padding:16px 18px">
+            <p style="margin:0 0 10px;color:var(--ink-soft);font-size:13px">
+              Pegá aquí el texto tal cual te llega, con el formato de siempre (Nombre y apellido / Localidad / Teléfono / Consulta / Medio).
+            </p>
+            <textarea id="pegar-texto" rows="5" placeholder="Nombre y apellido: NATALIA&#10;Localidad: CHOS MALAL&#10;Teléfono: 222222&#10;Consulta: PRUEBA&#10;Medio: WAP COMERCIAL" style="width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:13px;font-family:inherit;resize:vertical"></textarea>
+            <button class="btn btn-accent" style="margin-top:10px" onclick="cargarDatoPegado()">Cargar dato</button>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header">
+            <div class="filters">
+              <select id="filtro-estado" onchange="renderLeads()">
+                <option value="">Todos los estados</option>
+                <option>Nuevo</option>
+                <option>Contactado</option>
+                <option>En negociación</option>
+                <option>Turno agendado</option>
+                <option>Vendido</option>
+                <option>Perdido</option>
+              </select>
+              <select id="filtro-vendedor" onchange="renderLeads()">
+                <option value="">Todos los vendedores</option>
+              </select>
+              <input type="text" id="filtro-texto" placeholder="Buscar por nombre..." oninput="renderLeads()">
+              <select id="filtro-seguimiento" onchange="renderLeads()">
+                <option value="">Todos los seguimientos</option>
+                <option value="pendiente">Seguimiento hoy o vencido</option>
+                <option value="hoy">Seguimiento hoy</option>
+              </select>
+            </div>
+          </div>
+          <div id="leads-table-wrap">
+            <div class="empty-state">Cargando leads...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- VISTA: DASHBOARD -->
+      <div id="view-dashboard" style="display:none">
+        <div class="page-header">
+          <div><h2>Panel de control</h2><p>Resumen general de leads y desempeño</p></div>
+          <div class="filters">
+            <button class="btn btn-ghost" onclick="exportarLeadsCSV()">⬇️ Exportar leads (CSV)</button>
+            <button class="btn btn-ghost" onclick="exportarVentasCSV()">⬇️ Exportar ventas del mes (CSV)</button>
+          </div>
+        </div>
+        <div class="stats-row" id="stats-row"></div>
+
+        <div class="panel" style="margin-bottom:18px">
+          <div class="panel-header"><strong>🏆 Ventas del mes</strong></div>
+          <div id="ventas-mes-wrap">
+            <div class="empty-state">Cargando...</div>
+          </div>
+        </div>
+
+        <div class="panel" style="margin-bottom:18px">
+          <div class="panel-header">
+            <strong>🏆 Ranking histórico</strong>
+            <select id="ranking-historico-rango" onchange="renderRankingHistorico()">
+              <option value="mes">Este mes</option>
+              <option value="trimestre">Este trimestre</option>
+              <option value="anio">Este año</option>
+            </select>
+          </div>
+          <div id="ranking-historico-wrap">
+            <div class="empty-state">Cargando...</div>
+          </div>
+        </div>
+
+        <div class="panel" style="margin-bottom:18px">
+          <div class="panel-header"><strong>Motivos de pérdida (este mes)</strong></div>
+          <div id="motivos-perdida-wrap">
+            <div class="empty-state">Cargando...</div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header"><strong>Leads por vendedor</strong></div>
+          <div id="tabla-vendedores-wrap">
+            <div class="empty-state">Cargando...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- VISTA: VENDEDORES (solo admin) -->
+      <div id="view-vendedores" style="display:none">
+        <div class="page-header">
+          <div><h2>Vendedores</h2><p>Gestioná el equipo comercial</p></div>
+        </div>
+        <div class="panel">
+          <div id="vendedores-table-wrap">
+            <div class="empty-state">Cargando...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- VISTA: COMISIONES -->
+      <div id="view-comisiones" style="display:none">
+        <div class="page-header">
+          <div>
+            <h2>Comisiones</h2>
+            <p>Cierre mensual — último día del mes a las 22hs</p>
+          </div>
+          <div class="filters">
+            <input type="month" id="comisiones-periodo" onchange="renderComisiones()">
+          </div>
+        </div>
+
+        <div class="stats-row" id="comisiones-stats-row"></div>
+
+        <div class="panel" style="margin-bottom:18px">
+          <div class="panel-header"><strong>Comisión por vendedor</strong></div>
+          <div id="comisiones-vendedores-wrap">
+            <div class="empty-state">Cargando...</div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header"><strong>Supervisión y coordinación</strong></div>
+          <div id="comisiones-supervision-wrap">
+            <div class="empty-state">Cargando...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- VISTA: CUENTA CORRIENTE -->
+      <div id="view-cuentacorriente" style="display:none">
+        <div class="page-header">
+          <div>
+            <h2>Cuenta corriente</h2>
+            <p>Saldo de comisiones por vendedor</p>
+          </div>
+          <div class="filters">
+            <select id="cc-vendedor-select" onchange="renderCuentaCorriente()"></select>
+          </div>
+        </div>
+
+        <div class="panel" style="margin-bottom:18px">
+          <div style="padding:16px 18px;display:flex;gap:24px;flex-wrap:wrap;align-items:flex-end">
+            <div class="field" style="margin-bottom:0">
+              <label>Saldo inicial (previo al CRM)</label>
+              <input type="number" id="cc-saldo-inicial" style="width:180px">
+            </div>
+            <button class="btn btn-ghost" onclick="guardarSaldoInicial()">Guardar saldo inicial</button>
+            <div style="margin-left:auto;text-align:right">
+              <div style="font-size:12px;color:var(--ink-soft)">Saldo actual</div>
+              <div id="cc-saldo-actual" style="font-size:26px;font-weight:800">$0</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel" style="margin-bottom:18px">
+          <div class="panel-header"><strong>Cargar pago / adelanto</strong></div>
+          <div style="padding:16px 18px;display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end">
+            <div class="field" style="margin-bottom:0">
+              <label>Fecha</label>
+              <input type="date" id="cc-pago-fecha">
+            </div>
+            <div class="field" style="margin-bottom:0">
+              <label>Monto</label>
+              <input type="number" id="cc-pago-monto" style="width:150px" placeholder="Ej: 300000">
+            </div>
+            <div class="field" style="flex:1;min-width:200px;margin-bottom:0">
+              <label>Observación</label>
+              <input type="text" id="cc-pago-observacion" placeholder="Ej: adelanto en efectivo">
+            </div>
+            <button class="btn btn-accent" onclick="agregarPagoComision()">+ Agregar movimiento</button>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header"><strong>Movimientos</strong></div>
+          <div id="cc-movimientos-wrap">
+            <div class="empty-state">Cargando...</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ===================== MODAL: NUEVO / EDITAR LEAD ===================== -->
+<div class="modal-overlay" id="modal-lead">
+  <div class="modal">
+    <h3 id="modal-lead-title">Nuevo lead</h3>
+    <input type="hidden" id="lead-id">
+    <div class="field">
+      <label>Nombre completo</label>
+      <input type="text" id="lead-nombre" placeholder="Ej: Juan Pérez">
+    </div>
+    <div class="two-col">
+      <div class="field">
+        <label>Teléfono</label>
+        <input type="text" id="lead-telefono" placeholder="341...">
+      </div>
+      <div class="field">
+        <label>Localidad</label>
+        <input type="text" id="lead-localidad" placeholder="Ej: CHOS MALAL">
+      </div>
+    </div>
+    <div class="two-col">
+      <div class="field">
+        <label>Medio</label>
+        <input type="text" id="lead-fuente" list="lista-medios" placeholder="Ej: RADIO CHOSMA">
+        <datalist id="lista-medios">
+          <option value="RADIO RITMO">
+          <option value="RADIO CHOSMA">
+          <option value="RADIO PATAGONIA">
+          <option value="CADENA 1">
+          <option value="WAP COMERCIAL">
+          <option value="LLAMADA PERDIDA">
+          <option value="REFERIDO">
+          <option value="PAGINA WEB">
+          <option value="INSTAGRAM">
+          <option value="FACEBOOK">
+          <option value="RALLY TRICAO">
+        </datalist>
+      </div>
+      <div class="field">
+        <label>Asignar a</label>
+        <select id="lead-vendedor"></select>
+      </div>
+    </div>
+    <div class="two-col">
+      <div class="field">
+        <label>Vehículo de interés</label>
+        <input type="text" id="lead-vehiculo" placeholder="opcional">
+      </div>
+      <div class="field">
+        <label>Próximo seguimiento</label>
+        <input type="date" id="lead-seguimiento">
+      </div>
+    </div>
+    <div class="field">
+      <label>Email</label>
+      <input type="email" id="lead-email" placeholder="opcional">
+    </div>
+    <div class="field">
+      <label id="lead-notas-label">Consulta / notas</label>
+      <textarea id="lead-notas" rows="3" placeholder="Detalles de la conversación, presupuesto, etc."></textarea>
+    </div>
+
+    <div id="seguimiento-section" style="display:none">
+      <div class="dvd" style="height:1px;background:var(--line);margin:16px 0"></div>
+      <label style="display:block;font-size:12px;font-weight:600;color:var(--ink-soft);margin-bottom:8px">Historial de seguimiento</label>
+      <div id="seguimiento-lista" style="max-height:180px;overflow-y:auto;margin-bottom:10px"></div>
+      <div class="field">
+        <textarea id="nuevo-seguimiento-texto" rows="2" placeholder="Ej: Llamé el 04/07, dice que tiene $2M de presupuesto. Reintentar la semana que viene."></textarea>
+      </div>
+      <button class="btn btn-accent" type="button" style="width:100%" onclick="agregarSeguimiento()">+ Agregar seguimiento</button>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="cerrarModalLead()">Cancelar</button>
+      <button class="btn btn-primary" style="width:auto" onclick="guardarLead()">Guardar lead</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== MODAL: CERRAR VENTA ===================== -->
+<div class="modal-overlay" id="modal-venta">
+  <div class="modal" style="max-width:560px">
+    <h3 id="modal-venta-title">🎉 Cerrar venta</h3>
+    <input type="hidden" id="venta-lead-id">
+
+    <div style="background:var(--bg);border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:13px;color:var(--ink-soft)">
+      Cliente: <strong id="venta-info-cliente" style="color:var(--ink)">—</strong> ·
+      Localidad: <strong id="venta-info-localidad" style="color:var(--ink)">—</strong> ·
+      Origen: <strong id="venta-info-origen" style="color:var(--ink)">—</strong>
+    </div>
+
+    <div class="field">
+      <label>Canal de venta</label>
+      <select id="venta-canal" onchange="toggleCanalVenta()">
+        <option value="directa">Venta directa (auto particular)</option>
+        <option value="plan">Venta de plan</option>
+      </select>
+    </div>
+
+    <div id="venta-directa-wrap">
+      <div class="field">
+        <label>Titular registral (si es distinto del cliente)</label>
+        <input type="text" id="venta-titular" placeholder="Nombre y apellido del titular de crédito/registro">
+      </div>
+
+      <div class="field">
+        <label>Vehículo reservado</label>
+        <input type="text" id="venta-vehiculo" placeholder="Modelo, año, versión y lista (ej: VW Gol Trend 2023 1.6 MSI - Lista Interior)">
+      </div>
+
+      <div class="two-col">
+        <div class="field">
+          <label>Precio de venta (costo unidad sin gastos)</label>
+          <input type="number" id="venta-precio">
+        </div>
+        <div class="field">
+          <label>Fecha de venta</label>
+          <input type="date" id="venta-fecha">
+        </div>
+      </div>
+
+      <div class="two-col">
+        <div class="field">
+          <label>Acreedor prendario (banco)</label>
+          <select id="venta-banco">
+            <option value="">Contado / no aplica</option>
+            <option>SANTANDER</option>
+            <option>SUPERVIELLE</option>
+            <option>GALICIA</option>
+            <option>NACIÓN</option>
+            <option>FÁBRICA</option>
+            <option>CREDICUOTAS</option>
+            <option>FINZO</option>
+            <option>PRENDO</option>
+            <option>DE CREDITOS</option>
+            <option>BPN</option>
+            <option>BANCO FRANCÉS</option>
+            <option>ICBC</option>
+            <option>OTRO</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Tipo de crédito</label>
+          <select id="venta-tipo-credito">
+            <option value="">No aplica (contado)</option>
+            <option value="FIJA">FIJA</option>
+            <option value="UVA">UVA</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="two-col">
+        <div class="field">
+          <label>Monto del crédito</label>
+          <input type="number" id="venta-monto-credito" placeholder="Opcional">
+        </div>
+        <div class="field">
+          <label>Cantidad de cuotas</label>
+          <input type="number" id="venta-cuotas" placeholder="Opcional">
+        </div>
+      </div>
+
+      <div class="field">
+        <label>¿Entrega un usado?</label>
+        <select id="venta-entrega-usado" onchange="toggleUsadoVenta()">
+          <option value="no">No</option>
+          <option value="si">Sí</option>
+        </select>
+      </div>
+
+      <div id="venta-usado-wrap" style="display:none">
+        <div class="field">
+          <label>Detalle del usado entregado (modelo, año, versión, kms)</label>
+          <input type="text" id="venta-usado-detalle" placeholder="Ej: VW Gol 2015 1.6 Trendline, 85.000km">
+        </div>
+        <div class="field">
+          <label>Precio de toma del usado</label>
+          <input type="number" id="venta-usado-precio">
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Efectivo a entregar (incluida la reserva)</label>
+        <input type="number" id="venta-efectivo">
+      </div>
+    </div>
+
+    <div id="venta-plan-wrap" style="display:none">
+      <div class="field">
+        <label>Monto de cuota acordada</label>
+        <input type="number" id="venta-monto-cuota-plan" placeholder="Ej: 150000">
+      </div>
+      <div class="field">
+        <label>Fecha de venta</label>
+        <input type="date" id="venta-fecha-plan">
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="cerrarModalVenta(true)">Cancelar</button>
+      <button class="btn btn-primary" style="width:auto" onclick="confirmarVenta()">Confirmar venta</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== MODAL: DAR DE BAJA VENTA ===================== -->
+<div class="modal-overlay" id="modal-anular">
+  <div class="modal">
+    <h3>🗑️ Dar de baja la venta</h3>
+    <input type="hidden" id="anular-lead-id">
+    <p style="font-size:13px;color:var(--ink-soft);margin:0 0 14px">
+      El lead vuelve a quedar sin asignar y el vendedor deja de verlo. Vas a tener que reasignarlo si corresponde.
+    </p>
+    <div class="field">
+      <label>Motivo (opcional)</label>
+      <textarea id="anular-motivo" rows="2" placeholder="Ej: el cliente se arrepintió después de firmar"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="cerrarModalAnular(true)">Cancelar</button>
+      <button class="btn btn-primary" style="width:auto;background:var(--danger)" onclick="confirmarAnular()">Confirmar baja</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== MODAL: MOTIVO DE PÉRDIDA ===================== -->
+<div class="modal-overlay" id="modal-perdido">
+  <div class="modal">
+    <h3>Marcar como perdido</h3>
+    <input type="hidden" id="perdido-lead-id">
+    <div class="field">
+      <label>Motivo</label>
+      <select id="perdido-motivo">
+        <option>No contesta / Imposible contactar</option>
+        <option>Se arrepintió</option>
+        <option>Sin stock del vehículo que buscaba</option>
+        <option>Otro</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="cerrarModalPerdido(true)">Cancelar</button>
+      <button class="btn btn-primary" style="width:auto" onclick="confirmarPerdido()">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =====================================================
+   CONFIGURACIÓN — completar con los datos de tu proyecto
+   de Supabase (Project Settings > API)
+===================================================== */
+const SUPABASE_URL = "https://fgngdhhmqhetnvkzttpc.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_aHbX4rzWF9fecRMeC_qR3Q_E-Uid0am";
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let perfilActual = null;
+let leadsCache = [];
+let vendedoresCache = [];
+const ESTADOS_CERRADOS = ['Vendido','No califica','Compró en otro lado','Perdido','Anulada'];
+
+/* ---------------- LOGIN ---------------- */
+async function iniciarSesion(){
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  const errorBox = document.getElementById('login-error');
+  errorBox.textContent = '';
+
+  if(!email || !password){
+    errorBox.textContent = 'Completá email y contraseña.';
+    return;
+  }
+
+  const { data, error } = await sb.auth.signInWithPassword({ email, password });
+  if(error){
+    errorBox.textContent = 'No pudimos iniciar sesión. Revisá tus datos.';
+    return;
+  }
+  await cargarSesion();
+}
+
+async function cerrarSesion(){
+  await sb.auth.signOut();
+  location.reload();
+}
+
+async function cargarSesion(){
+  const { data: { session } } = await sb.auth.getSession();
+  if(!session){
+    document.getElementById('login-screen').style.display = 'flex';
+    document.getElementById('app').style.display = 'none';
+    return;
+  }
+
+  const { data: perfil, error } = await sb.from('perfiles').select('*').eq('id', session.user.id).single();
+  if(error || !perfil){
+    document.getElementById('login-error').textContent = 'No se encontró tu perfil. Contactá al administrador.';
+    return;
+  }
+
+  perfilActual = perfil;
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  document.getElementById('user-name-chip').textContent = perfil.nombre + (perfil.rol !== 'vendedor' ? ` (${perfil.rol})` : '');
+  document.getElementById('mobile-user-name').textContent = perfil.nombre;
+  vincularNotificacionesPush(perfil);
+  if(perfil.rol === 'admin'){
+    document.getElementById('nav-dashboard').style.display = 'flex';
+    document.getElementById('nav-vendedores').style.display = 'flex';
+    document.getElementById('nav-comisiones').style.display = 'flex';
+    document.getElementById('nav-cuentacorriente').style.display = 'flex';
+    document.getElementById('btn-nuevo-lead').style.display = 'inline-block';
+    document.getElementById('panel-carga-rapida').style.display = 'block';
+  }
+  if(perfil.rol === 'admin' || perfil.rol === 'supervisor'){
+    document.getElementById('sidebar-ranking').style.display = 'block';
+  }
+  if(perfil.rol !== 'admin'){
+    document.getElementById('nav-misventas').style.display = 'flex';
+  }
+
+  await cargarVendedores();
+  await cargarLeads();
+  renderPanelDiario();
+  renderDashboard();
+  renderRankingSidebar();
+  suscribirCambiosEnVivo();
+}
+
+/* Se actualiza solo cuando cualquier usuario crea/modifica un lead, sin recargar la página */
+function suscribirCambiosEnVivo(){
+  sb.channel('leads-en-vivo')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'leads' }, () => {
+      cargarLeads();
+    })
+    .subscribe();
+}
+
+/* ---------------- NAVEGACIÓN ---------------- */
+function cambiarVista(vista){
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+  document.querySelector(`.nav-item[data-view="${vista}"]`).classList.add('active');
+  ['hoy','leads','misventas','dashboard','vendedores','comisiones','cuentacorriente'].forEach(v => {
+    document.getElementById('view-' + v).style.display = (v === vista) ? 'block' : 'none';
+  });
+  if(vista === 'hoy') renderPanelDiario();
+  if(vista === 'misventas') renderMisVentas();
+  if(vista === 'dashboard') renderDashboard();
+  if(vista === 'vendedores') renderVendedoresTabla();
+  if(vista === 'comisiones') renderComisiones();
+  if(vista === 'cuentacorriente') abrirVistaCuentaCorriente();
+}
+
+/* ---------------- DATA: VENDEDORES ---------------- */
+async function cargarVendedores(){
+  const { data, error } = await sb.from('perfiles').select('*').order('nombre');
+  if(!error) vendedoresCache = data;
+
+  const selectFiltro = document.getElementById('filtro-vendedor');
+  const selectModal = document.getElementById('lead-vendedor');
+  selectFiltro.innerHTML = '<option value="">Todos los vendedores</option>';
+  selectModal.innerHTML = '<option value="">Sin asignar</option>';
+  vendedoresVisibles().forEach(v => {
+    selectFiltro.innerHTML += `<option value="${v.id}">${v.nombre}</option>`;
+    selectModal.innerHTML += `<option value="${v.id}">${v.nombre}</option>`;
+  });
+}
+
+/* ---------------- DATA: LEADS ---------------- */
+async function cargarLeads(){
+  const { data, error } = await sb.from('leads').select('*').order('creado_en', { ascending: false });
+  if(!error) leadsCache = data;
+  renderLeads();
+  renderPanelDiario();
+  renderRankingSidebar();
+  if(document.getElementById('view-misventas').style.display !== 'none') renderMisVentas();
+  if(document.getElementById('view-comisiones').style.display !== 'none') renderComisiones();
+  if(document.getElementById('view-cuentacorriente').style.display !== 'none') renderCuentaCorriente();
+}
+
+function nombreVendedor(id){
+  const v = vendedoresCache.find(v => v.id === id);
+  return v ? v.nombre : '—';
+}
+
+/* Devuelve todos los IDs que reportan (directa o indirectamente) a un supervisor */
+function equipoRecursivo(supervisorId){
+  const directos = vendedoresCache.filter(v => v.supervisor_id === supervisorId);
+  let resultado = directos.map(v => v.id);
+  directos.forEach(d => { resultado = resultado.concat(equipoRecursivo(d.id)); });
+  return resultado;
+}
+
+/* Vendedores que el usuario actual puede ver/asignar según su rol */
+function vendedoresVisibles(){
+  const activos = vendedoresCache.filter(v => v.activo);
+  if(perfilActual.rol === 'admin') return activos;
+  if(perfilActual.rol === 'supervisor'){
+    const equipoIds = new Set(equipoRecursivo(perfilActual.id));
+    return activos.filter(v => v.id === perfilActual.id || equipoIds.has(v.id));
+  }
+  return activos.filter(v => v.id === perfilActual.id);
+}
+
+function claseBadge(estado){
+  const map = {
+    'Nuevo':'badge-nuevo','Contactado':'badge-contactado','En seguimiento':'badge-contactado',
+    'En negociación':'badge-negociacion','Turno agendado':'badge-turno','Vendido':'badge-vendido',
+    'No califica':'badge-perdido','Compró en otro lado':'badge-perdido','Perdido':'badge-perdido','Anulada':'badge-perdido'
+  };
+  return map[estado] || 'badge-nuevo';
+}
+
+function hoyISO(){
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+function renderSeguimiento(fecha){
+  if(!fecha) return '<span style="color:var(--ink-soft)">—</span>';
+  const hoy = hoyISO();
+  const fechaFmt = new Date(fecha + 'T00:00:00').toLocaleDateString('es-AR', { day:'2-digit', month:'2-digit' });
+  if(fecha < hoy) return `<span class="badge badge-perdido">Venció ${fechaFmt}</span>`;
+  if(fecha === hoy) return `<span class="badge badge-vendido">Hoy</span>`;
+  return `<span class="badge badge-contactado">${fechaFmt}</span>`;
+}
+
+/* Determina si el usuario actual puede modificar estado/asignación de este lead puntual */
+function puedeEditarLead(l){
+  if(perfilActual.rol === 'admin') return true;
+  return l.vendedor_id === perfilActual.id;
+}
+
+function formatoFechaHora(iso){
+  const d = new Date(iso);
+  const dd = String(d.getDate()).padStart(2,'0');
+  const mm = String(d.getMonth()+1).padStart(2,'0');
+  const hh = String(d.getHours()).padStart(2,'0');
+  const min = String(d.getMinutes()).padStart(2,'0');
+  return `${dd}-${mm}-${d.getFullYear()} ${hh}:${min} hs`;
+}
+
+function linkWhatsapp(telefono){
+  if(!telefono) return null;
+  let numero = telefono.replace(/\D/g,'');
+  if(!numero) return null;
+  if(!numero.startsWith('54')) numero = '54' + numero;
+  if(!numero.startsWith('549')) numero = '549' + numero.slice(2);
+  return `https://wa.me/${numero}`;
+}
+
+function filaLeadHtml(l){
+  const fecha = formatoFechaHora(l.creado_en);
+  const editable = puedeEditarLead(l);
+
+  const nombreClickeable = editable
+    ? `<div class="lead-name" style="cursor:pointer;color:var(--accent-dark)" onclick="abrirModalEditarLead('${l.id}')">${l.nombre}</div>`
+    : `<div class="lead-name">${l.nombre}</div>`;
+
+  const ESTADOS = ['Nuevo','Contactado','En seguimiento','En negociación','Turno agendado','Vendido','No califica','Compró en otro lado','Perdido'];
+  const celdaEstado = editable
+    ? `<span class="badge ${claseBadge(l.estado)}">${l.estado}</span>
+        <select class="status-select" onchange="manejarCambioEstado('${l.id}', this.value)" style="margin-top:4px;display:block">
+          ${ESTADOS.map(e => `<option ${e===l.estado?'selected':''}>${e}</option>`).join('')}
+        </select>
+        ${(l.estado === 'Vendido' && perfilActual.rol === 'admin') ? `
+          <div style="margin-top:4px;font-size:11px">
+            <span style="cursor:pointer;color:var(--primary)" onclick="abrirModalVenta('${l.id}')">✏️ Editar venta</span>
+            &nbsp;·&nbsp;
+            <span style="cursor:pointer;color:var(--danger)" onclick="abrirModalAnular('${l.id}')">Dar de baja</span>
+          </div>` : ''}`
+    : `<span class="badge ${claseBadge(l.estado)}">${l.estado}</span>`;
+
+  const celdaVendedor = editable
+    ? `<select class="vendor-select" onchange="reasignarVendedor('${l.id}', this.value)">
+          <option value="">Sin asignar</option>
+          ${vendedoresVisibles().map(v => `<option value="${v.id}" ${v.id===l.vendedor_id?'selected':''}>${v.nombre}</option>`).join('')}
+        </select>`
+    : nombreVendedor(l.vendedor_id);
+
+  return `<tr>
+      <td>
+        ${nombreClickeable}
+        <div class="lead-sub">${l.telefono || ''} ${l.telefono ? `· <a href="${linkWhatsapp(l.telefono)}" target="_blank" style="color:var(--ok);text-decoration:none">💬 WhatsApp</a>` : ''}</div>
+      </td>
+      <td>${l.localidad || '—'}</td>
+      <td>${l.fuente}</td>
+      <td>${l.notas || l.vehiculo_interes || '—'}</td>
+      <td>${renderSeguimiento(l.proximo_seguimiento)}</td>
+      <td>${celdaEstado}</td>
+      <td>${celdaVendedor}</td>
+      <td>${fecha}</td>
+    </tr>`;
+}
+
+function tablaLeadsHtml(lista, mensajeVacio){
+  if(lista.length === 0){
+    return `<div class="empty-state"><div class="big">No hay leads para mostrar</div>${mensajeVacio}</div>`;
+  }
+  return `<table><thead><tr>
+    <th>Lead</th><th>Localidad</th><th>Medio</th><th>Consulta</th><th>Seguimiento</th><th>Estado</th><th>Vendedor</th><th>Ingresó</th>
+  </tr></thead><tbody>${lista.map(filaLeadHtml).join('')}</tbody></table>`;
+}
+
+function renderLeads(){
+  const filtroEstado = document.getElementById('filtro-estado').value;
+  const filtroVendedor = document.getElementById('filtro-vendedor').value;
+  const filtroTexto = document.getElementById('filtro-texto').value.toLowerCase();
+  const filtroSeguimiento = document.getElementById('filtro-seguimiento').value;
+  const hoy = hoyISO();
+
+  let lista = leadsCache.filter(l => {
+    if(filtroEstado && l.estado !== filtroEstado) return false;
+    if(filtroVendedor && l.vendedor_id !== filtroVendedor) return false;
+    if(filtroTexto && !l.nombre.toLowerCase().includes(filtroTexto)) return false;
+    if(filtroSeguimiento === 'pendiente' && !(l.proximo_seguimiento && l.proximo_seguimiento <= hoy)) return false;
+    if(filtroSeguimiento === 'hoy' && l.proximo_seguimiento !== hoy) return false;
+    return true;
+  });
+
+  document.getElementById('leads-subtitle').textContent = `${lista.length} lead${lista.length===1?'':'s'}`;
+  document.getElementById('leads-table-wrap').innerHTML = tablaLeadsHtml(lista, 'Probá cambiar los filtros o cargá un lead nuevo.');
+}
+
+/* ---------------- PANEL DIARIO ("Hoy") ---------------- */
+function esHoyOPendiente(l, hoy){
+  if(ESTADOS_CERRADOS.includes(l.estado)) return false;
+  const esNuevo = l.estado === 'Nuevo';
+  const seguimientoVencidoOHoy = l.proximo_seguimiento && l.proximo_seguimiento <= hoy;
+  return esNuevo || seguimientoVencidoOHoy;
+}
+
+function ordenarPorUrgencia(lista, hoy){
+  return lista.sort((a, b) => {
+    const prioridad = l => {
+      if(l.proximo_seguimiento && l.proximo_seguimiento < hoy) return 0;
+      if(l.proximo_seguimiento === hoy) return 1;
+      return 2;
+    };
+    return prioridad(a) - prioridad(b);
+  });
+}
+
+function renderPanelDiario(){
+  const hoy = hoyISO();
+
+  // Aviso de leads liberados automáticamente por falta de contacto (solo admin)
+  const alertaBox = document.getElementById('alerta-liberados');
+  if(perfilActual.rol === 'admin'){
+    const liberados = leadsCache.filter(l => l.liberado_sin_contactar && !l.vendedor_id && l.estado === 'Nuevo');
+    if(liberados.length > 0){
+      alertaBox.style.display = 'block';
+      document.getElementById('alerta-liberados-lista').innerHTML = liberados.map(l =>
+        `<span class="badge badge-perdido" style="cursor:pointer;margin:3px 4px 0 0" onclick="abrirModalEditarLead('${l.id}')">${l.nombre} — reasignar</span>`
+      ).join('');
+    } else {
+      alertaBox.style.display = 'none';
+    }
+  } else {
+    alertaBox.style.display = 'none';
+  }
+
+  if(perfilActual.rol === 'supervisor'){
+    // Sección 1: sus propios leads (como vendedora)
+    const propios = ordenarPorUrgencia(leadsCache.filter(l => l.vendedor_id === perfilActual.id && esHoyOPendiente(l, hoy)), hoy);
+    document.getElementById('hoy-titulo-propios').textContent = 'Tus leads';
+    document.getElementById('hoy-table-wrap').innerHTML = tablaLeadsHtml(propios, 'No tenés leads propios pendientes para hoy. 🎉');
+
+    // Sección 2: los de su equipo (solo lectura)
+    const idsEquipo = new Set(equipoRecursivo(perfilActual.id));
+    const deEquipo = ordenarPorUrgencia(leadsCache.filter(l => idsEquipo.has(l.vendedor_id) && esHoyOPendiente(l, hoy)), hoy);
+    document.getElementById('hoy-seccion-equipo').style.display = 'block';
+    document.getElementById('hoy-equipo-table-wrap').innerHTML = tablaLeadsHtml(deEquipo, 'Tu equipo no tiene leads pendientes para hoy.');
+
+    actualizarBadgeHoy(propios.length);
+  } else {
+    document.getElementById('hoy-titulo-propios').textContent = perfilActual.rol === 'admin' ? 'Todos los leads' : 'Tus leads';
+    document.getElementById('hoy-seccion-equipo').style.display = 'none';
+    const lista = ordenarPorUrgencia(leadsCache.filter(l => esHoyOPendiente(l, hoy)), hoy);
+    document.getElementById('hoy-table-wrap').innerHTML = tablaLeadsHtml(lista, 'No tenés leads nuevos ni seguimientos pendientes para hoy. 🎉');
+    actualizarBadgeHoy(lista.length);
+  }
+}
+
+function actualizarBadgeHoy(cantidad){
+  const badge = document.getElementById('hoy-badge');
+  if(cantidad > 0){
+    badge.textContent = cantidad;
+    badge.style.display = 'inline-block';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+async function actualizarEstado(leadId, nuevoEstado){
+  const { error } = await sb.from('leads').update({ estado: nuevoEstado }).eq('id', leadId);
+  if(!error){
+    const lead = leadsCache.find(l => l.id === leadId);
+    if(lead) lead.estado = nuevoEstado;
+    renderLeads();
+    renderPanelDiario();
+  }
+}
+
+/* Intercepta el cambio de estado: si es Vendido o Perdido, pide datos extra antes de guardar */
+function manejarCambioEstado(leadId, nuevoEstado){
+  if(nuevoEstado === 'Vendido'){ abrirModalVenta(leadId); return; }
+  if(nuevoEstado === 'Perdido'){ abrirModalPerdido(leadId); return; }
+  if(['No califica','Compró en otro lado'].includes(nuevoEstado)){
+    if(!confirm(`¿Confirmás marcar este lead como "${nuevoEstado}"? Va a dejar de aparecer en "Hoy".`)){
+      renderLeads(); renderPanelDiario();
+      return;
+    }
+  }
+  actualizarEstado(leadId, nuevoEstado);
+}
+
+function abrirModalVenta(leadId){
+  const l = leadsCache.find(x => x.id === leadId);
+  const editandoVentaExistente = l && l.estado === 'Vendido';
+  document.getElementById('modal-venta-title').textContent = editandoVentaExistente ? '✏️ Editar venta' : '🎉 Cerrar venta';
+
+  document.getElementById('venta-lead-id').value = leadId;
+  document.getElementById('venta-info-cliente').textContent = l ? l.nombre : '—';
+  document.getElementById('venta-info-localidad').textContent = (l && l.localidad) ? l.localidad : '—';
+  document.getElementById('venta-info-origen').textContent = l ? l.fuente : '—';
+
+  document.getElementById('venta-canal').value = editandoVentaExistente ? (l.canal_venta || 'directa') : 'directa';
+  document.getElementById('venta-titular').value = editandoVentaExistente ? (l.titular_registral || '') : '';
+  document.getElementById('venta-vehiculo').value = editandoVentaExistente ? (l.vehiculo_vendido || '') : '';
+  document.getElementById('venta-precio').value = editandoVentaExistente ? (l.monto_venta ?? '') : '';
+  document.getElementById('venta-fecha').value = editandoVentaExistente ? (l.fecha_venta || hoyISO()) : hoyISO();
+  document.getElementById('venta-banco').value = editandoVentaExistente ? (l.acreedor_prendario || '') : '';
+  document.getElementById('venta-tipo-credito').value = editandoVentaExistente ? (l.tipo_credito || '') : '';
+  document.getElementById('venta-monto-credito').value = editandoVentaExistente ? (l.monto_credito ?? '') : '';
+  document.getElementById('venta-cuotas').value = editandoVentaExistente ? (l.cantidad_cuotas ?? '') : '';
+  document.getElementById('venta-entrega-usado').value = (editandoVentaExistente && l.entrega_usado) ? 'si' : 'no';
+  document.getElementById('venta-usado-detalle').value = editandoVentaExistente ? (l.detalle_usado || '') : '';
+  document.getElementById('venta-usado-precio').value = editandoVentaExistente ? (l.precio_toma_usado ?? '') : '';
+  document.getElementById('venta-efectivo').value = editandoVentaExistente ? (l.efectivo_entrega ?? '') : '';
+  document.getElementById('venta-monto-cuota-plan').value = editandoVentaExistente ? (l.monto_cuota_plan ?? '') : '';
+  document.getElementById('venta-fecha-plan').value = editandoVentaExistente ? (l.fecha_venta || hoyISO()) : hoyISO();
+
+  toggleUsadoVenta();
+  toggleCanalVenta();
+  document.getElementById('modal-venta').style.display = 'flex';
+}
+
+function toggleCanalVenta(){
+  const esPlan = document.getElementById('venta-canal').value === 'plan';
+  document.getElementById('venta-directa-wrap').style.display = esPlan ? 'none' : 'block';
+  document.getElementById('venta-plan-wrap').style.display = esPlan ? 'block' : 'none';
+}
+
+function toggleUsadoVenta(){
+  const si = document.getElementById('venta-entrega-usado').value === 'si';
+  document.getElementById('venta-usado-wrap').style.display = si ? 'block' : 'none';
+}
+
+function cerrarModalVenta(revertir){
+  document.getElementById('modal-venta').style.display = 'none';
+  if(revertir){ renderLeads(); renderPanelDiario(); }
+}
+
+async function confirmarVenta(){
+  const leadId = document.getElementById('venta-lead-id').value;
+  const anterior = leadsCache.find(x => x.id === leadId);
+  const eraVentaExistente = anterior && anterior.estado === 'Vendido';
+  const canal = document.getElementById('venta-canal').value;
+  const numOrNull = (id) => {
+    const v = document.getElementById(id).value;
+    return v === '' ? null : Number(v);
+  };
+
+  let payload;
+
+  if(canal === 'plan'){
+    const montoCuota = document.getElementById('venta-monto-cuota-plan').value;
+    if(!montoCuota){
+      alert('Ingresá el monto de la cuota acordada.');
+      return;
+    }
+    payload = {
+      estado: 'Vendido',
+      canal_venta: 'plan',
+      monto_cuota_plan: Number(montoCuota),
+      fecha_venta: document.getElementById('venta-fecha-plan').value || hoyISO(),
+      // se limpian los campos de venta directa por si el lead ya tenía datos cargados antes
+      vehiculo_vendido: null, titular_registral: null, monto_venta: null,
+      acreedor_prendario: null, tipo_credito: null, monto_credito: null, cantidad_cuotas: null,
+      entrega_usado: false, detalle_usado: null, precio_toma_usado: null, efectivo_entrega: null
+    };
+  } else {
+    const vehiculo = document.getElementById('venta-vehiculo').value.trim();
+    if(!vehiculo){
+      alert('Ingresá el vehículo reservado.');
+      return;
+    }
+    const entregaUsado = document.getElementById('venta-entrega-usado').value === 'si';
+    payload = {
+      estado: 'Vendido',
+      canal_venta: 'directa',
+      vehiculo_vendido: vehiculo,
+      titular_registral: document.getElementById('venta-titular').value.trim() || null,
+      monto_venta: numOrNull('venta-precio'),
+      fecha_venta: document.getElementById('venta-fecha').value || hoyISO(),
+      acreedor_prendario: document.getElementById('venta-banco').value || null,
+      tipo_credito: document.getElementById('venta-tipo-credito').value || null,
+      monto_credito: numOrNull('venta-monto-credito'),
+      cantidad_cuotas: numOrNull('venta-cuotas'),
+      entrega_usado: entregaUsado,
+      detalle_usado: entregaUsado ? (document.getElementById('venta-usado-detalle').value.trim() || null) : null,
+      precio_toma_usado: entregaUsado ? numOrNull('venta-usado-precio') : null,
+      efectivo_entrega: numOrNull('venta-efectivo'),
+      monto_cuota_plan: null
+    };
+  }
+
+  const { error } = await sb.from('leads').update(payload).eq('id', leadId);
+
+  if(error){
+    alert('No se pudo guardar la venta: ' + error.message);
+    return;
+  }
+
+  if(eraVentaExistente){
+    await registrarCambiosVenta(anterior, payload, leadId);
+  }
+
+  document.getElementById('modal-venta').style.display = 'none';
+  await cargarLeads();
+  renderPanelDiario();
+  renderDashboard();
+}
+
+async function registrarCambiosVenta(anterior, payload, leadId){
+  const campos = {
+    vehiculo_vendido: 'Vehículo',
+    monto_venta: 'Precio de venta',
+    monto_cuota_plan: 'Monto de cuota (plan)',
+    titular_registral: 'Titular registral',
+    acreedor_prendario: 'Banco',
+    tipo_credito: 'Tipo de crédito',
+    monto_credito: 'Monto de crédito',
+    cantidad_cuotas: 'Cantidad de cuotas',
+    efectivo_entrega: 'Efectivo a entregar',
+    canal_venta: 'Canal de venta'
+  };
+  const cambios = [];
+  Object.keys(campos).forEach(campo => {
+    const antes = anterior[campo] ?? null;
+    const despues = payload[campo] ?? null;
+    if(String(antes) !== String(despues)){
+      cambios.push(`${campos[campo]}: ${antes ?? '—'} → ${despues ?? '—'}`);
+    }
+  });
+  if(cambios.length === 0) return;
+
+  await sb.from('historial_leads').insert({
+    lead_id: leadId,
+    usuario_id: perfilActual.id,
+    accion: 'Venta editada',
+    detalle: cambios.join(' · ')
+  });
+}
+
+function abrirModalAnular(leadId){
+  document.getElementById('anular-lead-id').value = leadId;
+  document.getElementById('anular-motivo').value = '';
+  document.getElementById('modal-anular').style.display = 'flex';
+}
+
+function cerrarModalAnular(revertir){
+  document.getElementById('modal-anular').style.display = 'none';
+  if(revertir){ renderLeads(); renderPanelDiario(); }
+}
+
+async function confirmarAnular(){
+  const leadId = document.getElementById('anular-lead-id').value;
+  const motivo = document.getElementById('anular-motivo').value.trim();
+
+  const { error } = await sb.from('leads').update({
+    estado: 'Anulada',
+    vendedor_id: null,
+    motivo_anulacion: motivo || null
+  }).eq('id', leadId);
+
+  if(error){
+    alert('No se pudo dar de baja la venta: ' + error.message);
+    return;
+  }
+  document.getElementById('modal-anular').style.display = 'none';
+  await cargarLeads();
+  renderPanelDiario();
+  renderDashboard();
+  renderRankingSidebar();
+}
+
+function abrirModalPerdido(leadId){
+  document.getElementById('perdido-lead-id').value = leadId;
+  document.getElementById('perdido-motivo').value = 'No contesta / Imposible contactar';
+  document.getElementById('modal-perdido').style.display = 'flex';
+}
+
+function cerrarModalPerdido(revertir){
+  document.getElementById('modal-perdido').style.display = 'none';
+  if(revertir){ renderLeads(); renderPanelDiario(); }
+}
+
+async function confirmarPerdido(){
+  const leadId = document.getElementById('perdido-lead-id').value;
+  const motivo = document.getElementById('perdido-motivo').value;
+
+  const { error } = await sb.from('leads').update({ estado: 'Perdido', motivo_perdido: motivo }).eq('id', leadId);
+  if(error){
+    alert('No se pudo guardar: ' + error.message);
+    return;
+  }
+  document.getElementById('modal-perdido').style.display = 'none';
+  await cargarLeads();
+  renderPanelDiario();
+  renderDashboard();
+}
+
+async function reasignarVendedor(leadId, vendedorId){
+  if(!vendedorId){
+    if(!confirm('¿Seguro que querés dejar este lead sin asignar?')){
+      renderLeads(); renderPanelDiario();
+      return;
+    }
+  }
+  const { error } = await sb.from('leads').update({
+    vendedor_id: vendedorId || null,
+    liberado_sin_contactar: false
+  }).eq('id', leadId);
+  if(!error){
+    const lead = leadsCache.find(l => l.id === leadId);
+    if(lead){ lead.vendedor_id = vendedorId || null; lead.liberado_sin_contactar = false; }
+    renderLeads();
+    renderPanelDiario();
+  }
+}
+
+/* ---------------- MODAL: NUEVO LEAD ---------------- */
+function abrirModalNuevoLead(){
+  document.getElementById('modal-lead-title').textContent = 'Nuevo lead';
+  document.getElementById('lead-id').value = '';
+  document.getElementById('lead-nombre').value = '';
+  document.getElementById('lead-telefono').value = '';
+  document.getElementById('lead-email').value = '';
+  document.getElementById('lead-fuente').value = '';
+  document.getElementById('lead-vendedor').value = '';
+  document.getElementById('lead-localidad').value = '';
+  document.getElementById('lead-vehiculo').value = '';
+  document.getElementById('lead-seguimiento').value = '';
+  document.getElementById('lead-notas').value = '';
+  document.getElementById('lead-notas-label').textContent = 'Consulta / notas';
+  document.getElementById('lead-notas').readOnly = false;
+  document.getElementById('seguimiento-section').style.display = 'none';
+  document.getElementById('modal-lead').style.display = 'flex';
+}
+
+function cerrarModalLead(){
+  document.getElementById('modal-lead').style.display = 'none';
+}
+
+async function abrirModalEditarLead(leadId){
+  const l = leadsCache.find(x => x.id === leadId);
+  if(!l) return;
+  document.getElementById('modal-lead-title').textContent = 'Editar lead';
+  document.getElementById('lead-id').value = l.id;
+  document.getElementById('lead-nombre').value = l.nombre || '';
+  document.getElementById('lead-telefono').value = l.telefono || '';
+  document.getElementById('lead-email').value = l.email || '';
+  document.getElementById('lead-fuente').value = l.fuente || '';
+  document.getElementById('lead-vendedor').value = l.vendedor_id || '';
+  document.getElementById('lead-localidad').value = l.localidad || '';
+  document.getElementById('lead-vehiculo').value = l.vehiculo_interes || '';
+  document.getElementById('lead-seguimiento').value = l.proximo_seguimiento || '';
+  document.getElementById('lead-notas').value = l.notas || '';
+
+  // La consulta original queda fija; solo el admin puede corregirla
+  document.getElementById('lead-notas-label').textContent = 'Consulta (original)';
+  document.getElementById('lead-notas').readOnly = perfilActual.rol !== 'admin';
+
+  document.getElementById('seguimiento-section').style.display = 'block';
+  document.getElementById('seguimiento-lista').innerHTML = '<div style="font-size:12px;color:var(--ink-soft)">Cargando...</div>';
+  document.getElementById('modal-lead').style.display = 'flex';
+
+  await cargarSeguimientos(leadId);
+}
+
+async function cargarSeguimientos(leadId){
+  const { data, error } = await sb.from('historial_leads').select('*').eq('lead_id', leadId).order('creado_en', { ascending: false });
+  const lista = document.getElementById('seguimiento-lista');
+  if(error || !data || data.length === 0){
+    lista.innerHTML = '<div style="font-size:12px;color:var(--ink-soft)">Todavía no hay seguimientos cargados.</div>';
+    return;
+  }
+  lista.innerHTML = data.map(h => {
+    const fecha = new Date(h.creado_en).toLocaleDateString('es-AR', { day:'2-digit', month:'2-digit', year:'numeric' });
+    const hora = new Date(h.creado_en).toLocaleTimeString('es-AR', { hour:'2-digit', minute:'2-digit' });
+    const autor = nombreVendedor(h.usuario_id);
+    const destacado = h.accion === 'Seguimiento';
+    return `<div style="padding:8px 10px;border-radius:7px;margin-bottom:6px;background:${destacado ? 'var(--accent-soft)' : 'var(--bg)'};font-size:12.5px">
+      <div style="color:var(--ink-soft);font-size:11px;margin-bottom:2px">${fecha} ${hora} · ${autor} · ${h.accion}</div>
+      ${h.detalle ? `<div>${h.detalle}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+async function agregarSeguimiento(){
+  const leadId = document.getElementById('lead-id').value;
+  const texto = document.getElementById('nuevo-seguimiento-texto').value.trim();
+  if(!leadId || !texto) return;
+
+  const { error } = await sb.from('historial_leads').insert({
+    lead_id: leadId,
+    usuario_id: perfilActual.id,
+    accion: 'Seguimiento',
+    detalle: texto
+  });
+
+  if(error){
+    alert('No se pudo guardar el seguimiento: ' + error.message);
+    return;
+  }
+  document.getElementById('nuevo-seguimiento-texto').value = '';
+  await cargarSeguimientos(leadId);
+}
+
+async function guardarLead(){
+  const nombre = document.getElementById('lead-nombre').value.trim();
+  if(!nombre){
+    alert('El nombre es obligatorio.');
+    return;
+  }
+
+  const leadId = document.getElementById('lead-id').value;
+  const telefono = document.getElementById('lead-telefono').value.trim();
+
+  // Chequeo de teléfono duplicado (solo al crear un lead nuevo)
+  if(!leadId && telefono){
+    const duplicado = leadsCache.find(l => l.telefono && l.telefono.replace(/\D/g,'') === telefono.replace(/\D/g,'') && telefono.replace(/\D/g,'').length > 0);
+    if(duplicado){
+      const continuar = confirm(`Ya existe un lead con este teléfono:\n\n"${duplicado.nombre}" — asignado a ${nombreVendedor(duplicado.vendedor_id)} — estado "${duplicado.estado}".\n\n¿Querés cargarlo de todas formas?`);
+      if(!continuar) return;
+    }
+  }
+
+  const payload = {
+    nombre,
+    telefono,
+    email: document.getElementById('lead-email').value.trim(),
+    fuente: document.getElementById('lead-fuente').value.trim() || 'Otro',
+    localidad: document.getElementById('lead-localidad').value.trim(),
+    vendedor_id: document.getElementById('lead-vendedor').value || null,
+    vehiculo_interes: document.getElementById('lead-vehiculo').value.trim(),
+    proximo_seguimiento: document.getElementById('lead-seguimiento').value || null,
+    notas: document.getElementById('lead-notas').value.trim(),
+    liberado_sin_contactar: false
+  };
+
+  const { error } = leadId
+    ? await sb.from('leads').update(payload).eq('id', leadId)
+    : await sb.from('leads').insert(payload);
+
+  if(error){
+    alert('No se pudo guardar el lead: ' + error.message);
+    return;
+  }
+  cerrarModalLead();
+  await cargarLeads();
+}
+
+/* ---------------- DASHBOARD ---------------- */
+function renderDashboard(){
+  renderMotivosPerdida();
+  renderRankingHistorico();
+  const total = leadsCache.length;
+  const vendidos = leadsCache.filter(l => l.estado === 'Vendido').length;
+  const enProceso = leadsCache.filter(l => !ESTADOS_CERRADOS.includes(l.estado)).length;
+  const perdidos = leadsCache.filter(l => l.estado === 'Perdido').length;
+  const conversion = total > 0 ? Math.round((vendidos/total)*100) : 0;
+  const hoy = hoyISO();
+  const seguimientosHoy = leadsCache.filter(l => l.proximo_seguimiento && l.proximo_seguimiento <= hoy && !ESTADOS_CERRADOS.includes(l.estado)).length;
+
+  document.getElementById('stats-row').innerHTML = `
+    <div class="stat-card"><div class="num">${total}</div><div class="lbl">Leads totales</div></div>
+    <div class="stat-card"><div class="num">${enProceso}</div><div class="lbl">En proceso</div></div>
+    <div class="stat-card"><div class="num">${vendidos}</div><div class="lbl">Vendidos</div></div>
+    <div class="stat-card"><div class="num">${perdidos}</div><div class="lbl">Perdidos</div></div>
+    <div class="stat-card"><div class="num">${conversion}%</div><div class="lbl">Tasa de conversión</div></div>
+    <div class="stat-card" style="border-color:var(--accent)"><div class="num" style="color:var(--accent)">${seguimientosHoy}</div><div class="lbl">Seguimientos para hoy</div></div>
+  `;
+
+  const porVendedor = vendedoresVisibles().map(v => {
+    const leadsV = leadsCache.filter(l => l.vendedor_id === v.id);
+    const vendidosV = leadsV.filter(l => l.estado === 'Vendido').length;
+    return { nombre: v.nombre, total: leadsV.length, vendidos: vendidosV };
+  });
+
+  renderVentasDelMes();
+
+  const wrap = document.getElementById('tabla-vendedores-wrap');
+  if(porVendedor.length === 0){
+    wrap.innerHTML = `<div class="empty-state">No hay vendedores cargados todavía.</div>`;
+    return;
+  }
+  let html = `<table><thead><tr><th>Vendedor</th><th>Leads asignados</th><th>Vendidos</th><th>Conversión</th></tr></thead><tbody>`;
+  porVendedor.forEach(v => {
+    const conv = v.total > 0 ? Math.round((v.vendidos/v.total)*100) : 0;
+    html += `<tr><td class="lead-name">${v.nombre}</td><td>${v.total}</td><td>${v.vendidos}</td><td>${conv}%</td></tr>`;
+  });
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
+}
+
+/* ---------------- VENTAS DEL MES ---------------- */
+function formatoMoneda(n){
+  if(n === null || n === undefined) return '—';
+  return '$' + Number(n).toLocaleString('es-AR');
+}
+
+function renderVentasDelMes(){
+  const hoy = new Date();
+  const anioMes = hoy.getFullYear() + '-' + String(hoy.getMonth()+1).padStart(2,'0');
+
+  const ventasMes = leadsCache.filter(l => {
+    if(l.estado !== 'Vendido') return false;
+    const fechaRef = l.fecha_venta || l.actualizado_en;
+    return fechaRef && fechaRef.startsWith(anioMes);
+  });
+
+  const directas = ventasMes.filter(l => l.canal_venta !== 'plan');
+  const planes = ventasMes.filter(l => l.canal_venta === 'plan');
+  const totalFacturado = directas.reduce((acc, l) => acc + (Number(l.monto_venta) || 0), 0);
+
+  const porVendedorVentas = {};
+  ventasMes.forEach(l => {
+    const nombre = nombreVendedor(l.vendedor_id);
+    if(!porVendedorVentas[nombre]) porVendedorVentas[nombre] = { directas: 0, planes: 0, monto: 0 };
+    if(l.canal_venta === 'plan') porVendedorVentas[nombre].planes++;
+    else { porVendedorVentas[nombre].directas++; porVendedorVentas[nombre].monto += Number(l.monto_venta) || 0; }
+  });
+  const ranking = Object.entries(porVendedorVentas).sort((a,b) => (b[1].directas+b[1].planes) - (a[1].directas+a[1].planes));
+
+  let html = `
+    <div style="padding:16px 18px;display:flex;gap:24px;flex-wrap:wrap;border-bottom:1px solid var(--line)">
+      <div><div style="font-size:24px;font-weight:800">${directas.length}</div><div style="font-size:12px;color:var(--ink-soft)">Autos vendidos (directa) este mes</div></div>
+      <div><div style="font-size:24px;font-weight:800">${planes.length}</div><div style="font-size:12px;color:var(--ink-soft)">Planes vendidos este mes</div></div>
+      <div><div style="font-size:24px;font-weight:800;color:var(--ok)">${formatoMoneda(totalFacturado)}</div><div style="font-size:12px;color:var(--ink-soft)">Facturado (ventas directas)</div></div>
+    </div>`;
+
+  if(ranking.length === 0){
+    html += `<div class="empty-state">Todavía no hay ventas cargadas este mes.</div>`;
+  } else {
+    html += `<table><thead><tr><th>Vendedor</th><th>Directa</th><th>Plan</th><th>Facturado (directa)</th></tr></thead><tbody>`;
+    ranking.forEach(([nombre, datos], i) => {
+      html += `<tr><td class="lead-name">${i===0 ? '🥇 ' : ''}${nombre}</td><td>${datos.directas}</td><td>${datos.planes}</td><td>${formatoMoneda(datos.monto)}</td></tr>`;
+    });
+    html += `</tbody></table>`;
+
+    html += `<div style="padding:14px 18px;border-top:1px solid var(--line)"><strong style="font-size:13px">Detalle de unidades vendidas:</strong></div>`;
+    html += `<table><thead><tr><th>Fecha</th><th>Cliente</th><th>Canal</th><th>Vehículo / Detalle</th><th>Vendedor</th><th>Monto</th></tr></thead><tbody>`;
+    ventasMes
+      .sort((a,b) => (b.fecha_venta||'').localeCompare(a.fecha_venta||''))
+      .forEach(l => {
+        const esPlan = l.canal_venta === 'plan';
+        html += `<tr>
+          <td>${l.fecha_venta ? new Date(l.fecha_venta+'T00:00:00').toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'}) : '—'}</td>
+          <td>${l.nombre}</td>
+          <td>${esPlan ? 'Plan' : 'Directa'}</td>
+          <td>${esPlan ? 'Venta de plan' : (l.vehiculo_vendido || '—')}</td>
+          <td>${nombreVendedor(l.vendedor_id)}</td>
+          <td>${esPlan ? formatoMoneda(l.monto_cuota_plan) + '/cuota' : formatoMoneda(l.monto_venta)}</td>
+        </tr>`;
+      });
+    html += `</tbody></table>`;
+  }
+
+  document.getElementById('ventas-mes-wrap').innerHTML = html;
+}
+
+/* ---------------- MIS VENTAS ---------------- */
+function renderMisVentas(){
+  const input = document.getElementById('misventas-periodo');
+  if(!input.value){
+    const hoy = new Date();
+    input.value = hoy.getFullYear() + '-' + String(hoy.getMonth()+1).padStart(2,'0');
+  }
+  const { inicio, fin } = limitesPeriodoComision(input.value);
+
+  const misVentasPeriodo = leadsCache.filter(l =>
+    l.vendedor_id === perfilActual.id && l.estado === 'Vendido' && l.actualizado_en &&
+    new Date(l.actualizado_en) > inicio && new Date(l.actualizado_en) <= fin
+  );
+
+  const wrap = document.getElementById('misventas-table-wrap');
+  if(misVentasPeriodo.length === 0){
+    wrap.innerHTML = `<div class="empty-state"><div class="big">No tenés ventas cargadas en este período</div>Elegí otro mes arriba, o cerrá tu primera venta para verla acá.</div>`;
+    return;
+  }
+
+  const directas = misVentasPeriodo.filter(l => l.canal_venta !== 'plan');
+  const planes = misVentasPeriodo.filter(l => l.canal_venta === 'plan');
+  const tasaDirecta = tasaComisionDirecta(perfilActual.nombre, directas.length);
+
+  const conComision = misVentasPeriodo.map(l => {
+    const esPlan = l.canal_venta === 'plan';
+    const monto = esPlan ? Number(l.monto_cuota_plan) || 0 : Number(l.monto_venta) || 0;
+    const comision = esPlan ? monto * TASA_PLAN : (tasaDirecta !== null ? monto * tasaDirecta : null);
+    return { l, esPlan, monto, comision };
+  }).sort((a,b) => new Date(b.l.actualizado_en) - new Date(a.l.actualizado_en));
+
+  let html = `<table><thead><tr><th>Fecha</th><th>Cliente</th><th>Localidad</th><th>Canal</th><th>Vehículo / Detalle</th><th>Monto</th><th>Comisión</th></tr></thead><tbody>`;
+  let totalMonto = 0, totalComision = 0;
+  conComision.forEach(({l, esPlan, monto, comision}) => {
+    totalMonto += monto;
+    if(comision !== null) totalComision += comision;
+    html += `<tr>
+      <td>${l.fecha_venta ? new Date(l.fecha_venta+'T00:00:00').toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric'}) : '—'}</td>
+      <td class="lead-name">${l.nombre}</td>
+      <td>${l.localidad || '—'}</td>
+      <td>${esPlan ? 'Plan' : 'Directa'}</td>
+      <td>${esPlan ? 'Venta de plan' : (l.vehiculo_vendido || '—')}</td>
+      <td>${esPlan ? formatoMoneda(monto) + '/cuota' : formatoMoneda(monto)}</td>
+      <td>${comision !== null ? formatoMoneda(comision) : '—'}</td>
+    </tr>`;
+  });
+
+  html += `<tr style="background:var(--bg);font-weight:700">
+    <td colspan="5">Total (${directas.length} directa${directas.length===1?'':'s'}${tasaDirecta!==null ? ' · tasa ' + (tasaDirecta*100).toString().replace('.',',') + '%' : ''}, ${planes.length} plan${planes.length===1?'':'es'})</td>
+    <td>${formatoMoneda(totalMonto)}</td>
+    <td>${formatoMoneda(totalComision)}</td>
+  </tr>`;
+
+  html += `</tbody></table>`;
+  wrap.innerHTML = html;
+}
+/* ---------------- EXPORTAR CSV ---------------- */
+function descargarCSV(nombreArchivo, encabezados, filas){
+  const escapar = (v) => `"${String(v ?? '').replace(/"/g,'""')}"`;
+  const contenido = [encabezados.map(escapar).join(',')]
+    .concat(filas.map(fila => fila.map(escapar).join(',')))
+    .join('\n');
+  const blob = new Blob(['\uFEFF' + contenido], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = nombreArchivo;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function exportarLeadsCSV(){
+  const encabezados = ['Nombre','Teléfono','Localidad','Medio','Consulta','Estado','Vendedor','Próximo seguimiento','Ingresó'];
+  const filas = leadsCache.map(l => [
+    l.nombre, l.telefono, l.localidad, l.fuente, l.notas, l.estado,
+    nombreVendedor(l.vendedor_id), l.proximo_seguimiento || '', formatoFechaHora(l.creado_en)
+  ]);
+  descargarCSV(`leads_autotrato_${hoyISO()}.csv`, encabezados, filas);
+}
+
+function exportarVentasCSV(){
+  const hoy = new Date();
+  const anioMes = hoy.getFullYear() + '-' + String(hoy.getMonth()+1).padStart(2,'0');
+  const ventasMes = leadsCache.filter(l => {
+    if(l.estado !== 'Vendido') return false;
+    const fechaRef = l.fecha_venta || l.actualizado_en;
+    return fechaRef && fechaRef.startsWith(anioMes);
+  });
+  const encabezados = ['Fecha','Cliente','Localidad','Canal','Vehículo/Detalle','Vendedor','Monto','Titular registral','Banco','Tipo crédito'];
+  const filas = ventasMes.map(l => [
+    l.fecha_venta || '', l.nombre, l.localidad,
+    l.canal_venta === 'plan' ? 'Plan' : 'Directa',
+    l.canal_venta === 'plan' ? 'Venta de plan' : (l.vehiculo_vendido || ''),
+    nombreVendedor(l.vendedor_id),
+    l.canal_venta === 'plan' ? l.monto_cuota_plan : l.monto_venta,
+    l.titular_registral || '', l.acreedor_prendario || '', l.tipo_credito || ''
+  ]);
+  descargarCSV(`ventas_autotrato_${anioMes}.csv`, encabezados, filas);
+}
+
+/* ---------------- RANKING HISTÓRICO ---------------- */
+function fechaInicioRango(tipo){
+  const ahora = new Date();
+  let inicio;
+  if(tipo === 'trimestre'){
+    const q = Math.floor(ahora.getMonth()/3);
+    inicio = new Date(ahora.getFullYear(), q*3, 1);
+  } else if(tipo === 'anio'){
+    inicio = new Date(ahora.getFullYear(), 0, 1);
+  } else {
+    inicio = new Date(ahora.getFullYear(), ahora.getMonth(), 1);
+  }
+  return inicio.toISOString().slice(0,10);
+}
+
+function renderRankingHistorico(){
+  const tipo = document.getElementById('ranking-historico-rango').value;
+  const desde = fechaInicioRango(tipo);
+
+  const ventas = leadsCache.filter(l => l.estado === 'Vendido' && (l.fecha_venta || l.actualizado_en || '') >= desde);
+  const visibles = vendedoresVisibles().filter(v => v.rol !== 'admin');
+
+  const conteo = visibles.map(v => {
+    const deV = ventas.filter(l => l.vendedor_id === v.id);
+    return {
+      nombre: v.nombre,
+      directas: deV.filter(l => l.canal_venta !== 'plan').length,
+      planes: deV.filter(l => l.canal_venta === 'plan').length
+    };
+  }).sort((a,b) => (b.directas+b.planes) - (a.directas+a.planes));
+
+  const wrap = document.getElementById('ranking-historico-wrap');
+  if(conteo.length === 0){
+    wrap.innerHTML = `<div class="empty-state">No hay vendedores para mostrar.</div>`;
+    return;
+  }
+  let html = `<table><thead><tr><th>Vendedor</th><th>Directa</th><th>Plan</th><th>Total</th></tr></thead><tbody>`;
+  conteo.forEach((v,i) => {
+    html += `<tr><td class="lead-name">${i===0 && (v.directas+v.planes)>0 ? '🥇 ' : ''}${v.nombre}</td><td>${v.directas}</td><td>${v.planes}</td><td><strong>${v.directas+v.planes}</strong></td></tr>`;
+  });
+  html += `</tbody></table>`;
+  wrap.innerHTML = html;
+}
+
+/* ---------------- MOTIVOS DE PÉRDIDA ---------------- */
+function renderMotivosPerdida(){
+  const hoy = new Date();
+  const anioMes = hoy.getFullYear() + '-' + String(hoy.getMonth()+1).padStart(2,'0');
+
+  const perdidos = leadsCache.filter(l =>
+    ['No califica','Compró en otro lado','Perdido'].includes(l.estado) &&
+    (l.actualizado_en || '').startsWith(anioMes)
+  );
+
+  const wrap = document.getElementById('motivos-perdida-wrap');
+  if(perdidos.length === 0){
+    wrap.innerHTML = `<div class="empty-state">No hay leads perdidos este mes. 🎉</div>`;
+    return;
+  }
+
+  const conteo = {};
+  perdidos.forEach(l => {
+    const etiqueta = l.estado === 'Perdido' ? (l.motivo_perdido || 'Sin motivo especificado') : l.estado;
+    conteo[etiqueta] = (conteo[etiqueta] || 0) + 1;
+  });
+
+  const total = perdidos.length;
+  const ordenado = Object.entries(conteo).sort((a,b) => b[1]-a[1]);
+
+  let html = `<div style="padding:16px 18px">`;
+  ordenado.forEach(([motivo, cantidad]) => {
+    const pct = Math.round((cantidad/total)*100);
+    html += `
+      <div style="margin-bottom:12px">
+        <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px">
+          <span>${motivo}</span><span style="color:var(--ink-soft)">${cantidad} (${pct}%)</span>
+        </div>
+        <div style="background:var(--bg);border-radius:100px;height:8px;overflow:hidden">
+          <div style="background:var(--danger);height:100%;width:${pct}%"></div>
+        </div>
+      </div>`;
+  });
+  html += `</div>`;
+  wrap.innerHTML = html;
+}
+
+function renderVendedoresTabla(){
+  const wrap = document.getElementById('vendedores-table-wrap');
+  if(vendedoresCache.length === 0){
+    wrap.innerHTML = `<div class="empty-state">No hay vendedores todavía.</div>`;
+    return;
+  }
+  let html = `<table><thead><tr><th>Nombre</th><th>Email</th><th>Rol</th><th>Reporta a</th><th>Estado</th></tr></thead><tbody>`;
+  const nombreRol = { admin: 'Administrador', supervisor: 'Supervisor', vendedor: 'Vendedor' };
+  vendedoresCache.forEach(v => {
+    html += `<tr>
+      <td class="lead-name">${v.nombre}</td>
+      <td>${v.email}</td>
+      <td>${nombreRol[v.rol] || v.rol}</td>
+      <td>${v.supervisor_id ? nombreVendedor(v.supervisor_id) : '—'}</td>
+      <td><span class="badge ${v.activo ? 'badge-vendido':'badge-perdido'}">${v.activo ? 'Activo':'Inactivo'}</span></td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
+}
+
+/* ---------------- CARGA RÁPIDA (texto pegado desde WhatsApp) ---------------- */
+function parsearTextoLead(texto){
+  const resultado = { nombre:'', localidad:'', telefono:'', consulta:'', medio:'' };
+  texto.split('\n').forEach(linea => {
+    const idx = linea.indexOf(':');
+    if(idx === -1) return;
+    const etiqueta = linea.slice(0, idx).trim().toLowerCase();
+    const valor = linea.slice(idx + 1).trim();
+    if(etiqueta.includes('nombre')) resultado.nombre = valor;
+    else if(etiqueta.includes('localidad')) resultado.localidad = valor;
+    else if(etiqueta.includes('tel')) resultado.telefono = valor;
+    else if(etiqueta.includes('consulta')) resultado.consulta = valor;
+    else if(etiqueta.includes('medio') || etiqueta.includes('origen')) resultado.medio = valor;
+  });
+  return resultado;
+}
+
+function cargarDatoPegado(){
+  const texto = document.getElementById('pegar-texto').value;
+  if(!texto.trim()){
+    alert('Pegá primero el texto del lead.');
+    return;
+  }
+  const datos = parsearTextoLead(texto);
+  if(!datos.nombre){
+    alert('No pude identificar el nombre. Revisá que el texto tenga el formato de siempre (Nombre y apellido: ...).');
+    return;
+  }
+
+  abrirModalNuevoLead();
+  document.getElementById('lead-nombre').value = datos.nombre;
+  document.getElementById('lead-localidad').value = datos.localidad;
+  document.getElementById('lead-telefono').value = datos.telefono;
+  document.getElementById('lead-notas').value = datos.consulta;
+  document.getElementById('lead-fuente').value = datos.medio;
+  document.getElementById('pegar-texto').value = '';
+}
+
+/* ---------------- RANKING COMPACTO DEL SIDEBAR ---------------- */
+function renderRankingSidebar(){
+  const box = document.getElementById('sidebar-ranking');
+  if(box.style.display === 'none') return;
+
+  const anioMes = new Date().getFullYear() + '-' + String(new Date().getMonth()+1).padStart(2,'0');
+  const visibles = vendedoresVisibles().filter(v => v.rol !== 'admin');
+
+  const conteo = visibles.map(v => {
+    const ventasV = leadsCache.filter(l => {
+      if(l.estado !== 'Vendido' || l.vendedor_id !== v.id) return false;
+      const fechaRef = l.fecha_venta || l.actualizado_en || '';
+      return fechaRef.startsWith(anioMes);
+    });
+    return {
+      nombre: v.nombre,
+      directas: ventasV.filter(l => l.canal_venta !== 'plan').length,
+      planes: ventasV.filter(l => l.canal_venta === 'plan').length
+    };
+  }).sort((a,b) => (b.directas + b.planes) - (a.directas + a.planes));
+
+  if(conteo.length === 0){
+    document.getElementById('sidebar-ranking-list').innerHTML = '<span style="opacity:.6">Sin vendedores para mostrar</span>';
+    return;
+  }
+
+  let html = `<div style="display:flex;justify-content:space-between;font-size:10.5px;opacity:.6;padding:0 0 4px;border-bottom:1px solid rgba(255,255,255,.15);margin-bottom:4px">
+    <span>Vendedor</span><span>Directa&nbsp;&nbsp;Plan</span>
+  </div>`;
+  html += conteo.map((v,i) =>
+    `<div style="display:flex;justify-content:space-between;padding:4px 0">
+      <span>${i===0 && (v.directas+v.planes)>0 ? '🥇 ' : ''}${v.nombre}</span>
+      <span style="display:flex;gap:14px"><strong style="min-width:14px;text-align:center">${v.directas}</strong><strong style="min-width:14px;text-align:center">${v.planes}</strong></span>
+    </div>`
+  ).join('');
+  document.getElementById('sidebar-ranking-list').innerHTML = html;
+}
+
+/* =====================================================
+   CONFIGURACIÓN DE COMISIONES
+   ⚠️ IMPORTANTE: los nombres de acá tienen que coincidir EXACTO
+   (mayúsculas, espacios, etc.) con el campo "nombre" de cada
+   persona en la tabla perfiles. Si algún nombre no coincide,
+   revisalo en Table Editor > perfiles y corregilo acá abajo.
+===================================================== */
+const COMISION_CONFIG = {
+  // 1,5% de la venta 1 a la 5, 2% de la 6 en adelante
+  grupoA: ['Marianella Supervisora', 'Natalia Chiavassa', 'Federico Colli'],
+  // 1% de la venta 1 a 3, 1,5% de la 4 a 5, 2% de la 6 en adelante
+  grupoB: ['Ramiro Supervisor', 'Victoria Vidal', 'Tamara Rodoreda'],
+  // Comisiones de supervisión/coordinación: 0,5% (o 0,25% si la empresa cerró con menos de 10 ventas directas)
+  supervision: [
+    { nombre: 'Marianella Supervisora', equipoNombres: ['Federico Colli', 'Tamara Rodoreda', 'Victoria Vidal'] },
+    { nombre: 'Ramiro Supervisor', equipoNombres: ['Marianella Supervisora', 'Federico Colli', 'Tamara Rodoreda', 'Victoria Vidal'] },
+    { nombre: 'Natalia Coordinadora', equipoNombres: null } // null = el total de toda la empresa
+  ]
+};
+const UMBRAL_VENTAS_SUPERVISION = 10;
+const TASA_SUPERVISION_ALTA = 0.005;
+const TASA_SUPERVISION_BAJA = 0.0025;
+const TASA_PLAN = 0.5; // 50% del valor de la cuota, para todos
+
+function tasaComisionDirecta(nombre, totalVentas){
+  if(COMISION_CONFIG.grupoA.includes(nombre)){
+    return totalVentas <= 5 ? 0.015 : 0.02;
+  }
+  if(COMISION_CONFIG.grupoB.includes(nombre)){
+    if(totalVentas <= 3) return 0.01;
+    if(totalVentas <= 5) return 0.015;
+    return 0.02;
+  }
+  return null; // esta persona no tiene comisión directa configurada
+}
+
+/* El cierre es el último día del mes a las 22hs, así que el período de
+   cada mes va desde el cierre anterior (22hs) hasta este cierre (22hs) */
+function limitesPeriodoComision(anioMesStr){
+  const [anio, mes] = anioMesStr.split('-').map(Number);
+  const fin = new Date(anio, mes, 0, 22, 0, 0);
+  const inicio = new Date(anio, mes - 1, 0, 22, 0, 0);
+  return { inicio, fin };
+}
+
+function ventasEnPeriodo(inicio, fin){
+  return leadsCache.filter(l => {
+    if(l.estado !== 'Vendido' || !l.actualizado_en) return false;
+    const t = new Date(l.actualizado_en);
+    return t > inicio && t <= fin;
+  });
+}
+
+function renderComisiones(){
+  const input = document.getElementById('comisiones-periodo');
+  if(!input.value){
+    const hoy = new Date();
+    input.value = hoy.getFullYear() + '-' + String(hoy.getMonth()+1).padStart(2,'0');
+  }
+  const { inicio, fin } = limitesPeriodoComision(input.value);
+  const ventas = ventasEnPeriodo(inicio, fin);
+  const ventasDirectas = ventas.filter(l => l.canal_venta !== 'plan');
+  const totalDirectasEmpresa = ventasDirectas.length;
+  const tasaSupervision = totalDirectasEmpresa >= UMBRAL_VENTAS_SUPERVISION ? TASA_SUPERVISION_ALTA : TASA_SUPERVISION_BAJA;
+
+  document.getElementById('comisiones-stats-row').innerHTML = `
+    <div class="stat-card"><div class="num">${totalDirectasEmpresa}</div><div class="lbl">Ventas directas (empresa)</div></div>
+    <div class="stat-card"><div class="num">${ventas.length - totalDirectasEmpresa}</div><div class="lbl">Planes vendidos (empresa)</div></div>
+    <div class="stat-card" style="border-color:var(--accent)"><div class="num" style="color:var(--accent)">${(tasaSupervision*100).toString().replace('.',',')}%</div><div class="lbl">Tasa de supervisión aplicable</div></div>
+  `;
+
+  // ---- Comisión por vendedor ----
+  const nombresConComision = [...COMISION_CONFIG.grupoA, ...COMISION_CONFIG.grupoB];
+  const filasVendedores = nombresConComision.map(nombre => {
+    const perfil = vendedoresCache.find(v => v.nombre === nombre);
+    if(!perfil) return { nombre, error: true };
+
+    const ventasV = ventas.filter(l => l.vendedor_id === perfil.id);
+    const directasV = ventasV.filter(l => l.canal_venta !== 'plan');
+    const planesV = ventasV.filter(l => l.canal_venta === 'plan');
+
+    const montoDirectas = directasV.reduce((acc, l) => acc + (Number(l.monto_venta) || 0), 0);
+    const tasaDirecta = tasaComisionDirecta(nombre, directasV.length);
+    const comisionDirecta = montoDirectas * (tasaDirecta || 0);
+
+    const montoPlanes = planesV.reduce((acc, l) => acc + (Number(l.monto_cuota_plan) || 0), 0);
+    const comisionPlanes = montoPlanes * TASA_PLAN;
+
+    return {
+      nombre,
+      directas: directasV.length,
+      montoDirectas,
+      comisionDirecta,
+      planes: planesV.length,
+      comisionPlanes,
+      total: comisionDirecta + comisionPlanes
+    };
+  });
+
+  let htmlV = `<table><thead><tr>
+    <th>Vendedor</th><th>Ventas directas</th><th>Monto directas</th><th>Comisión directa</th>
+    <th>Planes</th><th>Comisión planes</th><th>Total a cobrar</th>
+  </tr></thead><tbody>`;
+  filasVendedores.forEach(f => {
+    if(f.error){
+      htmlV += `<tr><td class="lead-name">${f.nombre}</td><td colspan="6" style="color:var(--danger)">No se encontró un perfil con este nombre exacto — revisar configuración</td></tr>`;
+      return;
+    }
+    htmlV += `<tr>
+      <td class="lead-name">${f.nombre}</td>
+      <td>${f.directas}</td>
+      <td>${formatoMoneda(f.montoDirectas)}</td>
+      <td>${formatoMoneda(f.comisionDirecta)}</td>
+      <td>${f.planes}</td>
+      <td>${formatoMoneda(f.comisionPlanes)}</td>
+      <td><strong>${formatoMoneda(f.total)}</strong></td>
+    </tr>`;
+  });
+
+  const validas = filasVendedores.filter(f => !f.error);
+  const totalDirectasCant = validas.reduce((acc,f) => acc + f.directas, 0);
+  const totalMontoDirectas = validas.reduce((acc,f) => acc + f.montoDirectas, 0);
+  const totalComisionDirecta = validas.reduce((acc,f) => acc + f.comisionDirecta, 0);
+  const totalPlanesCant = validas.reduce((acc,f) => acc + f.planes, 0);
+  const totalComisionPlanes = validas.reduce((acc,f) => acc + f.comisionPlanes, 0);
+  const totalACobrar = validas.reduce((acc,f) => acc + f.total, 0);
+
+  htmlV += `<tr style="background:var(--bg);font-weight:700">
+    <td>Total</td>
+    <td>${totalDirectasCant}</td>
+    <td>${formatoMoneda(totalMontoDirectas)}</td>
+    <td>${formatoMoneda(totalComisionDirecta)}</td>
+    <td>${totalPlanesCant}</td>
+    <td>${formatoMoneda(totalComisionPlanes)}</td>
+    <td>${formatoMoneda(totalACobrar)}</td>
+  </tr>`;
+
+  htmlV += `</tbody></table>`;
+  document.getElementById('comisiones-vendedores-wrap').innerHTML = htmlV;
+
+  // ---- Comisión de supervisión / coordinación ----
+  const filasSupervision = COMISION_CONFIG.supervision.map(cfg => {
+    let base;
+    if(cfg.equipoNombres === null){
+      base = ventasDirectas.reduce((acc, l) => acc + (Number(l.monto_venta) || 0), 0);
+    } else {
+      base = ventasDirectas
+        .filter(l => cfg.equipoNombres.includes(nombreVendedor(l.vendedor_id)))
+        .reduce((acc, l) => acc + (Number(l.monto_venta) || 0), 0);
+    }
+    return { nombre: cfg.nombre, base, comision: base * tasaSupervision };
+  });
+
+  let htmlS = `<table><thead><tr><th>Nombre</th><th>Base (monto de venta)</th><th>Tasa</th><th>Comisión</th></tr></thead><tbody>`;
+  filasSupervision.forEach(f => {
+    htmlS += `<tr>
+      <td class="lead-name">${f.nombre}</td>
+      <td>${formatoMoneda(f.base)}</td>
+      <td>${(tasaSupervision*100).toString().replace('.',',')}%</td>
+      <td><strong>${formatoMoneda(f.comision)}</strong></td>
+    </tr>`;
+  });
+  htmlS += `</tbody></table>`;
+  document.getElementById('comisiones-supervision-wrap').innerHTML = htmlS;
+}
+
+/* ---------------- CUENTA CORRIENTE DE COMISIONES ---------------- */
+async function abrirVistaCuentaCorriente(){
+  const select = document.getElementById('cc-vendedor-select');
+  if(select.options.length === 0){
+    const nombresConComision = [...COMISION_CONFIG.grupoA, ...COMISION_CONFIG.grupoB];
+    const vendedoresConComision = vendedoresCache.filter(v => nombresConComision.includes(v.nombre));
+    select.innerHTML = vendedoresConComision.map(v => `<option value="${v.id}">${v.nombre}</option>`).join('');
+  }
+  await renderCuentaCorriente();
+}
+
+async function renderCuentaCorriente(){
+  const vendedorId = document.getElementById('cc-vendedor-select').value;
+  if(!vendedorId) return;
+  const vendedor = vendedoresCache.find(v => v.id === vendedorId);
+  if(!vendedor) return;
+
+  document.getElementById('cc-saldo-inicial').value = vendedor.saldo_inicial_comisiones ?? 0;
+  if(!document.getElementById('cc-pago-fecha').value) document.getElementById('cc-pago-fecha').value = hoyISO();
+
+  const { data: pagos, error: errorPagos } = await sb.from('pagos_comisiones').select('*').eq('vendedor_id', vendedorId).order('fecha', { ascending: true });
+  if(errorPagos){
+    document.getElementById('cc-movimientos-wrap').innerHTML = `<div class="empty-state" style="color:var(--danger)">Error cargando movimientos: ${errorPagos.message}</div>`;
+    return;
+  }
+
+  const ventasVendedor = leadsCache.filter(l => l.vendedor_id === vendedorId && l.estado === 'Vendido' && l.actualizado_en);
+
+  const mesesSet = new Set(ventasVendedor.map(l => {
+    const d = new Date(l.actualizado_en);
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+  }));
+  const meses = [...mesesSet].sort();
+
+  const movimientos = [];
+  meses.forEach(mesStr => {
+    const { inicio, fin } = limitesPeriodoComision(mesStr);
+    const ventasMes = ventasVendedor.filter(l => {
+      const t = new Date(l.actualizado_en);
+      return t > inicio && t <= fin;
+    });
+    const directas = ventasMes.filter(l => l.canal_venta !== 'plan');
+    const tasa = tasaComisionDirecta(vendedor.nombre, directas.length);
+    const esMesActual = fin > new Date();
+
+    ventasMes.forEach(l => {
+      const esPlan = l.canal_venta === 'plan';
+      const monto = esPlan ? (Number(l.monto_cuota_plan) || 0) : (Number(l.monto_venta) || 0);
+      const comision = esPlan ? monto * TASA_PLAN : (tasa !== null ? monto * tasa : 0);
+      movimientos.push({
+        fecha: new Date(l.actualizado_en),
+        detalle: `Venta ${esPlan ? 'plan' : 'directa'} — ${l.nombre}${esMesActual ? ' <span style="color:var(--ink-soft);font-size:11px">(mes en curso, no cerrado)</span>' : ''}`,
+        comision,
+        pago: 0
+      });
+    });
+  });
+
+  (pagos || []).forEach(p => {
+    movimientos.push({
+      fecha: new Date(p.fecha + 'T12:00:00'),
+      detalle: 'Pago/Adelanto' + (p.observacion ? ': ' + p.observacion : ''),
+      comision: 0,
+      pago: Number(p.monto) || 0
+    });
+  });
+
+  movimientos.sort((a,b) => a.fecha - b.fecha);
+
+  let saldo = Number(vendedor.saldo_inicial_comisiones) || 0;
+  const wrap = document.getElementById('cc-movimientos-wrap');
+
+  if(movimientos.length === 0){
+    wrap.innerHTML = `<div class="empty-state">Todavía no hay ventas ni pagos cargados para este vendedor.</div>`;
+    document.getElementById('cc-saldo-actual').textContent = formatoMoneda(saldo);
+    return;
+  }
+
+  let html = `<table><thead><tr><th>Fecha</th><th>Detalle</th><th>Comisión</th><th>Pago/Adelanto</th><th>Saldo</th></tr></thead><tbody>`;
+  html += `<tr style="background:var(--bg)"><td>—</td><td class="lead-name">Saldo inicial</td><td>—</td><td>—</td><td><strong>${formatoMoneda(saldo)}</strong></td></tr>`;
+  movimientos.forEach(m => {
+    saldo += m.comision - m.pago;
+    html += `<tr>
+      <td>${m.fecha.toLocaleDateString('es-AR')}</td>
+      <td>${m.detalle}</td>
+      <td>${m.comision ? formatoMoneda(m.comision) : '—'}</td>
+      <td>${m.pago ? formatoMoneda(m.pago) : '—'}</td>
+      <td><strong>${formatoMoneda(saldo)}</strong></td>
+    </tr>`;
+  });
+  html += `</tbody></table>`;
+  wrap.innerHTML = html;
+  document.getElementById('cc-saldo-actual').textContent = formatoMoneda(saldo);
+}
+
+async function guardarSaldoInicial(){
+  const vendedorId = document.getElementById('cc-vendedor-select').value;
+  const monto = Number(document.getElementById('cc-saldo-inicial').value) || 0;
+
+  const { error } = await sb.from('perfiles').update({ saldo_inicial_comisiones: monto }).eq('id', vendedorId);
+  if(error){
+    alert('No se pudo guardar el saldo inicial: ' + error.message);
+    return;
+  }
+  const v = vendedoresCache.find(v => v.id === vendedorId);
+  if(v) v.saldo_inicial_comisiones = monto;
+  await renderCuentaCorriente();
+}
+
+async function agregarPagoComision(){
+  const vendedorId = document.getElementById('cc-vendedor-select').value;
+  const fecha = document.getElementById('cc-pago-fecha').value || hoyISO();
+  const monto = Number(document.getElementById('cc-pago-monto').value);
+  const observacion = document.getElementById('cc-pago-observacion').value.trim();
+
+  if(!monto){
+    alert('Ingresá un monto.');
+    return;
+  }
+
+  const { error } = await sb.from('pagos_comisiones').insert({
+    vendedor_id: vendedorId,
+    fecha,
+    monto,
+    observacion: observacion || null,
+    creado_por: perfilActual.id
+  });
+
+  if(error){
+    alert('No se pudo guardar el movimiento: ' + error.message);
+    return;
+  }
+
+  document.getElementById('cc-pago-monto').value = '';
+  document.getElementById('cc-pago-observacion').value = '';
+  await renderCuentaCorriente();
+}
+
+/* ---------------- NOTIFICACIONES PUSH (OneSignal) ---------------- */
+function vincularNotificacionesPush(perfil){
+  if(!window.OneSignalDeferred) return;
+  window.OneSignalDeferred.push(async function(OneSignal){
+    try{
+      await OneSignal.login(perfil.id);
+      await OneSignal.Notifications.requestPermission();
+    }catch(e){
+      console.log('No se pudo activar notificaciones push:', e);
+    }
+  });
+}
+
+/* ---------------- INIT ---------------- */
+if('serviceWorker' in navigator){
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  });
+}
+cargarSesion();
+</script>
+</body>
+</html>
