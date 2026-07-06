@@ -1,3 +1,4 @@
+importScripts("https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js");
 const CACHE_NAME = 'autotrato-crm-v1';
 const ARCHIVOS_BASE = ['./index.html', './manifest.json', './icon-192.png', './icon-512.png'];
 
@@ -30,4 +31,3 @@ self.addEventListener('fetch', (event) => {
       .catch(() => caches.match(event.request))
   );
 });
-importScripts("https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js");
